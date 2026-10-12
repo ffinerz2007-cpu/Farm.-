@@ -1,0 +1,140 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+
+-- Global Settings
+getgenv().Settings = Settings or {
+    Aimbot = false,
+    ShowFOV = true,
+    FOVSize = 100,
+    AimPart = "Head",
+    ESP = false,
+    NameESP = false,
+    ESPColor = Color3.fromRGB(255, 0, 0),
+    GUIKey = Enum.KeyCode.RightShift
+}
+
+local ColorMap = {
+    ["แดง (Red)"] = Color3.fromRGB(255, 0, 0),
+    ["เขียว (Green)"] = Color3.fromRGB(0, 255, 0),
+    ["ขาว (White)"] = Color3.fromRGB(255, 255, 255),
+    ["ฟ้า (Cyan)"] = Color3.fromRGB(0, 255, 255),
+    ["ม่วง (Purple)"] = Color3.fromRGB(128, 0, 128),
+    ["ชมพู (Pink)"] = Color3.fromRGB(255, 192, 203),
+    ["น้ำเงิน (Blue)"] = Color3.fromRGB(0, 0, 255),
+    ["ดำ (Black)"] = Color3.fromRGB(0, 0, 0)
+}
+
+-- Drawing Objects (FOV & Tracer)
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Filled = false
+FOVCircle.Thickness = 1
+FOVCircle.Color = Color3.fromRGB(255, 255, 255)
+
+local TargetTracer = Drawing.new("Line")
+TargetTracer.Thickness = 1
+TargetTracer.Color = Color3.fromRGB(255, 0, 0)
+
+-- Aimbot Logic
+local function GetClosestTarget()
+    local closest, maxDist = nil, Settings.FOVSize
+    local cam = workspace.CurrentCamera
+    local mousePos = UserInputService:GetMouseLocation()
+
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+            local targetPart = p.Character:FindFirstChild(Settings.AimPart == "Neck" and "Head" or Settings.AimPart)
+            if targetPart then
+                local screenPos, onScreen = cam:WorldToViewportPoint(targetPart.Position)
+                if onScreen then
+                    local dist = (mousePos - Vector2.new(screenPos.X, screenPos.Y)).Magnitude
+                    if dist < maxDist then
+                        maxDist = dist
+                        closest = {Part = targetPart, ScreenPos = Vector2.new(screenPos.X, screenPos.Y)}
+                    end
+                end
+            end
+        end
+    end
+    return closest
+end
+
+-- Main Render Loop
+RunService.RenderStepped:Connect(function()
+    local cam = workspace.CurrentCamera
+    local mousePos = UserInputService:GetMouseLocation()
+    
+    -- Update FOV
+    FOVCircle.Position = mousePos
+    FOVCircle.Radius = Settings.FOVSize
+    FOVCircle.Visible = Settings.ShowFOV
+
+    -- Aimbot & Tracer
+    if Settings.Aimbot then
+        local target = GetClosestTarget()
+        if target then
+            cam.CFrame = CFrame.new(cam.CFrame.Position, target.Part.Position)
+            TargetTracer.From = Vector2.new(cam.ViewportSize.X / 2, cam.ViewportSize.Y)
+            TargetTracer.To = target.ScreenPos
+            TargetTracer.Visible = true
+        else
+            TargetTracer.Visible = false
+        end
+    else
+        TargetTracer.Visible = false
+    end
+
+    -- ESP & NameESP Loop Handler
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            -- Highlight ESP
+            local hl = p.Character:FindFirstChild("ESPHighlight")
+            if Settings.ESP then
+                if not hl then
+                    hl = Instance.new("Highlight")
+                    hl.Name = "ESPHighlight"
+                    hl.Parent = p.Character
+                end
+                hl.FillColor = Settings.ESPColor
+                hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+            elseif hl then
+                hl:Destroy()
+            end
+
+            -- Name ESP
+            local head = p.Character:FindFirstChild("Head")
+            local tag = head and head:FindFirstChild("NameTag")
+            if Settings.NameESP and head then
+                if not tag then
+                    tag = Instance.new("BillboardGui")
+                    tag.Name = "NameTag"
+                    tag.Adornee = head
+                    tag.Size = UDim2.new(0, 120, 0, 30)
+                    tag.StudsOffset = Vector3.new(0, 2.5, 0)
+                    tag.AlwaysOnTop = true
+
+                    local bg = Instance.new("Frame", tag)
+                    bg.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+                    bg.BackgroundTransparency = 0.3
+                    bg.Size = UDim2.new(1, 0, 1, 0)
+                    
+                    local corner = Instance.new("UICorner", bg)
+                    corner.CornerRadius = UDim.new(0, 4)
+
+                    local lbl = Instance.new("TextLabel", bg)
+                    lbl.BackgroundTransparency = 1
+                    lbl.Size = UDim2.new(1, 0, 1, 0)
+                    lbl.Font = Enum.Font.GothamBold
+                    lbl.Text = p.Name
+                    lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    lbl.TextSize = 12
+                    
+                    tag.Parent = head
+                end
+            elseif tag then
+                tag:Destroy()
+            end
+        end
+    end
+end)
