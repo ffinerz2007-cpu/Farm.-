@@ -1,0 +1,158 @@
+```lua
+getgenv().Configs = {
+    ATMHacker = {
+        Bank = {
+            Enabled = true,
+            Threshold = 200
+        },
+        RepairBelow = 60,
+        Underground = "Off"
+    },
+    AntiFinish = true,
+    Appearance = {
+        Blur = true,
+        Draggable = true,
+        Dropshadow = true,
+        MinimizeKeybind = "RightControl",
+        Resizable = true,
+        Searching = true,
+        Theme = "Obsidian"
+    },
+    Cook = {
+        Bank = {
+            Enabled = true,
+            Threshold = 500
+        },
+        Skillet = {
+            Enabled = true,
+            Pick = "Smart"
+        }
+    },
+    Defense = "Aura",
+    Enabled = true,
+    Fishing = {
+        Area = "Smart",
+        Bank = {
+            Enabled = true,
+            Threshold = 2000
+        },
+        Equipment = {
+            Bait = "Smart",
+            BaitPerTrip = 50,
+            Rod = "Smart"
+        },
+        Filter = {
+            Enabled = true,
+            Method = "skip",
+            MinRarity = "Uncommon"
+        },
+        Mode = "Normal",
+        RepairBelow = 60,
+        Sell = {
+            Condition = "Legendary",
+            Enabled = true
+        },
+        Underground = "Full Underground",
+        Webhook = {
+            Enabled = true,
+            Rarities = {
+                Epic = true,
+                Legendary = true,
+                Omega = true
+            },
+            Url = ""
+        }
+    },
+    Health = {
+        AutoRejoin = {
+            Enabled = false,
+            RejoinMethod = "teleport",
+            Unit = "h",
+            Value = 3
+        }
+    },
+    Janitor = {
+        Bank = {
+            Enabled = true,
+            Threshold = 200
+        },
+        Mop = {
+            Enabled = true,
+            Pick = "Smart"
+        }
+    },
+    Job = "fishing",
+    Marketplace = {
+        AtmAmount = 5000000,
+        SpinSkips = true
+    },
+    Planting = {
+        Enabled = true,
+        Seed = "SunflowerSeeds",
+        WaterThreshold = 60
+    },
+    RespawnOnDeath = true,
+    Rotation = {
+        Enabled = false,
+        Jobs = {
+            {
+                Job = "steakhouse_cook",
+                Minutes = 10
+            },
+            {
+                Job = "janitor",
+                Minutes = 0
+            },
+            {
+                Job = "shelf_stocker",
+                Minutes = 15
+            },
+            {
+                Job = "fishing",
+                Minutes = 30
+            },
+            {
+                Job = "atm_hacker",
+                Minutes = 30
+            }
+        }
+    },
+    Settings = {
+        BlackScreen = false,
+        FramerateCap = true,
+        FramerateLimit = 20,
+        Performance = true
+    },
+    StaminaFarm = true,
+    Stocker = {
+        Bank = {
+            Enabled = true,
+            Threshold = 200
+        }
+    },
+    Storm = {
+        Finisher = {
+            BankTarget = 1000000,
+            Enabled = true,
+            Job = "fishing",
+            Level = 70,
+            RequireLevel = false
+        }
+    },
+    StreamerMode = {
+        Enabled = true
+    },
+    Underground = {
+        Depth = 12,
+        Mode = "Normal"
+    },
+    Vehicle = {
+        Enabled = true,
+        Type = "Car"
+    }
+}
+
+---- Get Script ใหม่เท่านั้น ----
+script_key = "คีย์ที่ได้จากการ Get Script";
+loadstring(game:HttpGet("https://api.luarmor.net/files/v4/loaders/d801c6x7f8fxfx7c0678ee2b8e6x88x1.lua"))()
+```
