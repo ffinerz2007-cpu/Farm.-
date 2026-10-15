@@ -1,0 +1,154 @@
+pcall(function()
+    for _, obj in ipairs(getgc(true)) do
+        if typeof(obj) == "table" then
+            if rawget(obj, "validity_check") then obj.validity_check = function() return true end end
+            if rawget(obj, "invalid_entry") then rawset(obj, "invalid_entry", function() return true end) end
+            if rawget(obj, "is_limited") then obj.is_limited = function() return false end end
+            if rawget(obj, "clock") then obj.clock = function() return true end end
+        end
+    end
+end)
+
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
+local Workspace = game:GetService("Workspace")
+local LocalPlayer = Players.LocalPlayer
+
+_G.PureLoopFishing = false
+task.wait(0.1)
+_G.PureLoopFishing = true
+
+local Net = require(ReplicatedStorage.Modules.Core.Net)
+local DataModule = require(ReplicatedStorage.Modules.Core.Data)
+local SliderMinigame = require(ReplicatedStorage.Modules.Game.Minigames.SliderMinigame)
+local Keybinds = require(ReplicatedStorage.Modules.Game.Keybinds)
+local RemoteGet = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Get")
+
+local lastProcessedLevel = 0
+
+local function ScanAndFilterInventory()
+    local rodData = nil
+    local baitData = nil
+    
+    pcall(function()
+        local dataMod = require(ReplicatedStorage.Modules.Core.Data)
+        if dataMod and dataMod.items then
+            local items = dataMod.items
+            
+            if items.rod and items.rod.FishingRodRegular and items.rod.FishingRodRegular[1] then
+                rodData = items.rod.FishingRodRegular[1]
+            end
+            
+            if items.ammo and items.ammo.fish_bait_wormtec_regular and items.ammo.fish_bait_wormtec_regular[1] then
+                baitData = items.ammo.fish_bait_wormtec_regular[1]
+            end
+        end
+    end)
+    
+    return rodData, baitData
+end
+
+local function ExecuteBaitAndCastLoopSequence()
+    if not _G.PureLoopFishing then return end
+
+    local character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local backpack = LocalPlayer:WaitForChild("Backpack")
+    
+    local rod, bait = ScanAndFilterInventory()
+    
+    if not rod then 
+        print("Rod not found in inventory")
+        return 
+    end
+
+    if rod.location == "safe" then
+        RemoteGet:InvokeServer(math.random(100, 200), "request_change_item_location", rod.guid, "hand")
+        task.wait(0.2)
+        rod, bait = ScanAndFilterInventory()
+    end
+
+    local actualRod = character:FindFirstChild("FishingRodRegular") or backpack:FindFirstChild("FishingRodRegular") or character:FindFirstChildWhichIsA("Tool")
+    if actualRod and actualRod.Parent ~= character then
+        humanoid:EquipTool(actualRod)
+        task.wait(0.1)
+    end
+
+    local CounterTable = nil
+    for _, upv in pairs(debug.getupvalues(Net.get)) do
+        if type(upv) == "table" and upv.func ~= nil then CounterTable = upv break end
+    end
+    if CounterTable then CounterTable.func = CounterTable.func + 1 end
+
+    local currentAmmoLeft = rod.ammo_amount or 0
+    print("Bait remaining: " .. tostring(currentAmmoLeft))
+
+    if currentAmmoLeft == 0 and rod.location == "hand" then
+        if bait and (bait.amount or 0) > 0 then
+            local baitFuncId = CounterTable and CounterTable.func or 86
+            print("Equipping bait, Sequence: " .. tostring(baitFuncId))
+            
+            pcall(function()
+                RemoteGet:InvokeServer(baitFuncId, "equip_ammo_on_item", rod.guid, bait.guid)
+            end)
+            
+            task.wait(0.5)
+            if CounterTable then CounterTable.func = CounterTable.func + 1 end
+        else
+            print("No bait available")
+            return
+        end
+    else
+        print("Bait available, skipping refill")
+    end
+
+    local waterTargetPos = Vector3.new(131.20475769042969, 249.84375, -768.5926513671875)
+    local castFuncId = CounterTable and CounterTable.func or 87
+    
+    print("Casting rod, Sequence: " .. tostring(castFuncId))
+    pcall(function()
+        RemoteGet:InvokeServer(castFuncId, "throw_rod", actualRod, waterTargetPos)
+    end)
+end
+
+task.spawn(function()
+    local keybindsEnv = getfenv(Keybinds.hook_action)
+    local hookedFunctionsTable = keybindsEnv and keybindsEnv.hooked_functions
+
+    SliderMinigame.needle_pos.hook(function(currentNeedlePos)
+        if not _G.PureLoopFishing then return end
+        if SliderMinigame.enabled.get() == true then
+            local targetSize = SliderMinigame.target_size.get()
+            local targetPos = SliderMinigame.target_pos.get()
+            local currentLevel = SliderMinigame.level.get()
+            if currentLevel == lastProcessedLevel then return end
+            
+            local halfSize = targetSize / 2
+            local hitZoneMin = targetPos - (halfSize + 0.03)
+            local hitZoneMax = targetPos + (halfSize + 0.03)
+            
+            if (currentNeedlePos >= hitZoneMin) and (currentNeedlePos <= hitZoneMax) then
+                lastProcessedLevel = currentLevel 
+                task.wait(math.random(1, 2) / 100)
+                if hookedFunctionsTable and hookedFunctionsTable["minigame_click"] then
+                    local clickDataList = hookedFunctionsTable["minigame_click"]
+                    if type(clickDataList) == "table" then
+                        for _, clickObj in pairs(clickDataList) do if clickObj.func then task.spawn(clickObj.func, true, Enum.UserInputState.Begin) end end
+                    end
+                else
+                    pcall(function() SliderMinigame.level.set(currentLevel + 1) end)
+                end
+            end
+        end
+    end)
+end)
+
+SliderMinigame.enabled.hook(function(isEnabled)
+    if not _G.PureLoopFishing then return end
+    if isEnabled == false then
+        lastProcessedLevel = 0
+        task.wait(0.3)
+        print("Minigame complete, starting next loop")
+        task.spawn(ExecuteBaitAndCastLoopSequence)
+    end
+end)
